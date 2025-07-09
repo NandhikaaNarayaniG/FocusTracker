@@ -19,3 +19,7 @@ FocusFlow is a lightweight backend-powered distraction tracking tool built using
 - Log Streaming: Server-Sent Events (SSE)
 - Signal Handling: os/signal, syscall
 - Routing: net/http
+
+  ![FocusFlow UI](./static/screenshot.png)
+Live log streaming with distraction tracking dashboard
+
