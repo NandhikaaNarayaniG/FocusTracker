@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>FocusFlow</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f9f6ef;
+      --primary: #2c3e50;
+      --accent: #3498db;
+      --focus: #27ae60;
+      --distraction: #e74c3c;
+      --box: #ffffff;
+      --border: #ddd;
+      --shadow: rgba(0, 0, 0, 0.08);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--primary);
+      min-height: 100vh;
+      padding: 30px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #timer {
+      position: absolute;
+      top: 25px;
+      right: 40px;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+
+    .header-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      color: var(--primary);
+    }
+
+    .controls {
+      display: flex;
+      gap: 16px;
+    }
+
+    button {
+      padding: 10px 22px;
+      font-size: 15px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 150px;
+    }
+
+    .start-btn {
+      background-color: var(--focus);
+      color: white;
+    }
+
+    .start-btn:hover {
+      background-color: #1e874b;
+    }
+
+    .report-btn {
+      background-color: var(--accent);
+      color: white;
+      margin-top: 20px;
+    }
+
+    .report-btn:hover {
+      background-color: #2573b0;
+      
+    }
+
+    main {
+      display: flex;
+      gap: 30px;
+      justify-content: center;
+      align-items: stretch;
+      width: 100%;
+      max-width: 1200px;
+    }
+
+    #logs,
+    #chartContainer {
+      flex: 1;
+      background-color: var(--box);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 6px 15px var(--shadow);
+      display: flex;
+      flex-direction: column;
+      min-height: 350px;
+    }
+
+    #logs {
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 13px;
+    }
+
+    #chartContainer {
+      display: none;
+      position: relative;
+    }
+
+    #closeChart {
+      position: absolute;
+      top: 12px;
+      right: 14px;
+      background: none;
+      border: none;
+      font-size: 18px;
+      font-weight: bold;
+      color: #888;
+      cursor: pointer;
+    }
+
+    #closeChart:hover {
+      color: #444;
+    }
+
+    canvas {
+      width: 100% !important;
+      max-height: 220px !important;
+      margin: 0 auto;
+      margin-top: 30px;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        flex-direction: column;
+      }
+
+      #logs,
+      #chartContainer {
+        width: 100%;
+      }
+
+      canvas {
+        max-height: 180px !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="timer">⏱️ Time Spent: 00:00</div>
+
+  <div class="header-container">
+    <h1>FocusFlow</h1>
+    <div class="controls">
+      <form action="/start" method="post" style="display: inline;">
+        <button class="start-btn" type="submit">▶️ Start Tracking</button>
+      </form>
+      <button class="report-btn" id="reportBtn">📈 Show Report</button>
+    </div>
+  </div>
+
+  <main>
+    <div id="logs"></div>
+
+    <div id="chartContainer">
+      <button id="closeChart">✕</button>
+      <canvas id="reportChart"></canvas>
+    </div>
+  </main>
+
+  <script>
+    const logBox = document.getElementById("logs");
+    const eventSource = new EventSource("/logs");
+    const reportBtn = document.getElementById("reportBtn");
+    const chartContainer = document.getElementById("chartContainer");
+    const closeChartBtn = document.getElementById("closeChart");
+    const timerDisplay = document.getElementById("timer");
+
+    const logs = [];
+
+    eventSource.onmessage = function(event) {
+      logBox.innerHTML += event.data + "<br>";
+      logBox.scrollTop = logBox.scrollHeight;
+      logs.push(event.data);
+    };
+
+    reportBtn.addEventListener("click", () => {
+      chartContainer.style.display = "flex";
+
+      let focused = 0;
+      let distracted = 0;
+
+      logs.forEach(entry => {
+        if (entry.includes("Focused")) focused++;
+        else if (entry.includes("Distracted")) distracted++;
+      });
+
+      const ctx = document.getElementById("reportChart").getContext("2d");
+
+      if (window.myChart) window.myChart.destroy();
+
+      window.myChart = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels: ["Focused", "Distracted"],
+          datasets: [{
+            data: [focused, distracted],
+            backgroundColor: ["#27ae60", "#e74c3c"],
+            borderColor: ["#1e874b", "#c0392b"],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: "Focus vs Distraction Summary",
+              font: {
+                size: 16
+              }
+            },
+            legend: {
+              position: "bottom",
+              labels: {
+                boxWidth: 14,
+                font: {
+                  size: 13
+                }
+              }
+            }
+          }
+        }
+      });
+    });
+
+    closeChartBtn.addEventListener("click", () => {
+      chartContainer.style.display = "none";
+    });
+
+    let seconds = 0;
+    setInterval(() => {
+      seconds++;
+      const mins = String(Math.floor(seconds / 60)).padStart(2, "0");
+      const secs = String(seconds % 60).padStart(2, "0");
+      timerDisplay.textContent = `⏱️ Time Spent: ${mins}:${secs}`;
+    }, 1000);
+  </script>
+</body>
+</html>

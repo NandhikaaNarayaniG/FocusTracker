@@ -1,0 +1,168 @@
+#logs {
+            width: 80%;
+            height: 300px;
+            border: 1px solid #ccc;
+            overflow-y: scroll;
+            padding: 10px;
+            background: #f9f9f9;
+            font-family: monospace;
+        }
+    </style>
+=======
+    <style>
+        #logs {
+            width: 80%;
+            height: 300px;
+            border: 1px solid #ccc;
+            overflow-y: scroll;
+            padding: 10px;
+            background: #f9f9f9;
+            font-family: monospace;
+        }
+        #visuals {
+            width: 80%;
+            margin-top: 20px;
+        }
+        .bar-container {
+            width: 100%;
+            background-color: #ddd;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            height: 30px;
+            overflow: hidden;
+        }
+        .bar {
+            height: 100%;
+            line-height: 30px;
+            color: white;
+            text-align: center;
+            white-space: nowrap;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+        #focusedBar {
+            background-color: #4CAF50;
+            width: 0%;
+            transition: width 0.5s ease-in-out;
+        }
+        #distractedBar {
+            background-color: #f44336;
+            width: 0%;
+            transition: width 0.5s ease-in-out;
+        }
+    </style>
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+    <h2>Live Logs:</h2>
+    <div id="logs"></div>
+
+    <script>
+        const logBox = document.getElementById("logs");
+        const eventSource = new EventSource("/logs");
+
+        eventSource.onmessage = function(event) {
+            logBox.innerHTML += event.data + "<br>";
+            logBox.scrollTop = logBox.scrollHeight;
+        };
+    </script>
+=======
+    <h2>Live Logs:</h2>
+    <div id="logs"></div>
+
+    <h2>Focus vs Distraction Time</h2>
+    <div id="visuals">
+        <div class="bar-container">
+            <div id="focusedBar" class="bar">Focused: 0s</div>
+        </div>
+        <div class="bar-container">
+            <div id="distractedBar" class="bar">Distracted: 0s</div>
+        </div>
+    </div>
+
+    <script>
+        const logBox = document.getElementById("logs");
+        const focusedBar = document.getElementById("focusedBar");
+        const distractedBar = document.getElementById("distractedBar");
+
+        // Variables to track time in milliseconds
+        let focusedTime = 0;
+        let distractedTime = 0;
+
+        // To track last event timestamp and state
+        let lastTimestamp = null;
+        let lastState = null; // "focused" or "distracted"
+
+        // Helper function to parse timestamp from log line if available
+        function parseTimestamp(log) {
+            // Assuming log lines start with ISO timestamp e.g. "2024-06-01T12:34:56.789Z ..."
+            const match = log.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+Z)/);
+            if (match) {
+                return new Date(match[1]);
+            }
+            return null;
+        }
+
+        // Helper function to update bars visually
+        function updateBars() {
+            const total = focusedTime + distractedTime;
+            if (total === 0) {
+                focusedBar.style.width = "0%";
+                distractedBar.style.width = "0%";
+                focusedBar.textContent = "Focused: 0s";
+                distractedBar.textContent = "Distracted: 0s";
+                return;
+            }
+            const focusedPercent = (focusedTime / total) * 100;
+            const distractedPercent = (distractedTime / total) * 100;
+
+            focusedBar.style.width = focusedPercent + "%";
+            distractedBar.style.width = distractedPercent + "%";
+
+            focusedBar.textContent = `Focused: ${Math.floor(focusedTime / 1000)}s (${focusedPercent.toFixed(1)}%)`;
+            distractedBar.textContent = `Distracted: ${Math.floor(distractedTime / 1000)}s (${distractedPercent.toFixed(1)}%)`;
+        }
+
+        const eventSource = new EventSource("/logs");
+
+        eventSource.onmessage = function(event) {
+            const log = event.data;
+            logBox.innerHTML += log + "<br>";
+            logBox.scrollTop = logBox.scrollHeight;
+
+            // Parse timestamp
+            const timestamp = parseTimestamp(log);
+            if (!timestamp) {
+                // If no timestamp, ignore for time calculation
+                return;
+            }
+
+            // Determine current state from log message content
+            // Assuming logs contain keywords "focused" or "distracted" to indicate state
+            let currentState = null;
+            if (log.toLowerCase().includes("focused")) {
+                currentState = "focused";
+            } else if (log.toLowerCase().includes("distracted")) {
+                currentState = "distracted";
+            } else {
+                // If no state info, ignore for time calculation
+                return;
+            }
+
+            if (lastTimestamp && lastState) {
+                // Calculate time difference from last event
+                const diff = timestamp - lastTimestamp;
+                if (lastState === "focused") {
+                    focusedTime += diff;
+                } else if (lastState === "distracted") {
+                    distractedTime += diff;
+                }
+            }
+
+            // Update last event info
+            lastTimestamp = timestamp;
+            lastState = currentState;
+
+            // Update visual bars
+            updateBars();
+        };
+    </script>
